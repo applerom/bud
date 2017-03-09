@@ -1,0 +1,21 @@
+;[]============================================================[] BUD
+;ToDo:  BUD (BIOS USB Driver) - Драйвер USB под BIOS
+;Subs:  bud_Init:
+;               IN:     EAX = DeviceID/VendorID for Search/Init
+;               OUT:    CF if error
+;                       DS:SI - DATA_buffer if success (CF = 0)
+;       bud_R:
+;               IN:     DS:SI = DATA_buffer with Read Datas
+;                       CX = Size (in bytes)
+;               OUT:    CF if error
+;       bud_W:
+;               IN:     DS:SI = DATA_buffer for Write
+;                       CX = Size (in bytes)
+;               OUT:    CF if error
+;       bud_Send_cmd:
+;               IN:     DS:SI = DATA_buffer with Request
+;               OUT:    CF if error
+;       bud_GetLastError:
+;               IN:     --
+;               OUT:    AX = Error Index
+;[]=====.=======|===============================*==============[]

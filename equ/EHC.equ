@@ -1,0 +1,47 @@
+;[]=====.=======|===============================*==============[]
+;{}      EHCI I/O REGISTER DEFINITION
+;[]=====.=======|===============================*==============[]
+USBCMD_EHCI     equ     00h     ;
+;***** биты PORTSC0_EHCI ***
+        HCRESET         equ     10b              ;bit 01 of 00h
+HCSPARAMS       equ     04h     ; управление и состояние n-го порта корневого хаба
+  HCSPARAMS__N_PORTS      equ     0Fh   ; число нисходящих портов.
+
+PORTSC0_EHCI    equ     44h     ; управление и состояние n-го порта корневого хаба
+;***** биты PORTSC0_EHCI ***
+        Port_Owner      equ     1000000000000b   ;bit 13 of 44h
+
+
+macro   get_EHC Rx
+{       mov     edx, Rx
+        call    EHC.get }
+
+macro   set_EHC Rx, Value
+{       mov     eax, Value
+        mov     edx, Rx
+        call    EHC.set }
+
+macro   or_EHC  Rx, Value
+{       mov     eax, Value
+        mov     edx, Rx
+        call    EHC.or }
+
+macro   and_EHC Rx, Value
+{       mov     eax, Value
+        mov     edx, Rx
+        call    EHC.and }
+
+macro   cmd_EHC Value
+{       mov     eax, Value
+        mov     edx, HcCommandStatus
+        call    EHC.cmd }
+
+macro   cmd_or_EHC  Value
+{       mov     eax, Value
+        mov     edx, HcCommandStatus
+        call    EHC.or }
+
+macro   cmd_and_EHC Value
+{       mov     eax, Value
+        mov     edx, HcCommandStatus
+        call    EHC.and }

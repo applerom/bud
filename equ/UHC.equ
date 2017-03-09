@@ -1,0 +1,212 @@
+macro   get_UHC         Rx                      ; word by default
+{       mov     dx, Rx
+        call    UHC.get }
+
+macro   get_UHC_byte    Rx
+{       mov     dx, Rx
+        call    UHC.get_byte }
+
+macro   get_UHC_dword   Rx
+{       mov     dx, Rx
+        call    UHC.get_dword }
+
+macro   set_UHC         Rx, Value               ; word by default
+{       mov     ax, Value
+        mov     dx, Rx
+        call    UHC.set }
+
+macro   set_UHC_byte    Rx, Value
+{       mov     al, Value
+        mov     dx, Rx
+        call    UHC.set_byte }
+
+macro   set_UHC_dword   Rx, Value
+{       mov     eax, Value
+        mov     dx, Rx
+        call    UHC.set_dword }
+
+macro   or_UHC          Rx, Value               ; word by default
+{       mov     ax, Value
+        mov     dx, Rx
+        call    UHC.or }
+
+macro   and_UHC         Rx, Value               ; word by default
+{       mov     ax, Value
+        mov     dx, Rx
+        call    UHC.and }
+
+macro   cmd_UHC         Value                   ; byte for cmd
+{       mov     al, Value
+        mov     dx, USBCMD
+        call    UHC.set_byte }
+
+macro   cmd_or_UHC      Value                   ; byte for cmd
+{       mov     al, Value
+        mov     dx, USBCMD
+        call    UHC.or_byte }
+
+macro   cmd_and_UHC     Value                   ; byte for cmd
+{       mov     al, Value
+        mov     dx, USBCMD
+        call    UHC.and_byte }
+;[]=====.=======|===============================*==============[]
+                                                ; Uniseral usage for FL, QH and TD
+QH_UHC__LP              EQU     0FFFFFFF0H      ; Link Pointer
+QH_UHC__VF              EQU     04H             ; Vertical (1) or Horizontal (0)
+QH_UHC__Q               EQU     02H             ; QH/TD Select, 1 = QH LP, 0 = TD LP
+QH_UHC__T               EQU     01H             ; Terminate, 1 = LP not Valid
+struc QH_UHC
+{                                               ; Queue Head data structure
+.dQhLink         dd      ?                      ; 00:queue head link pointer
+.dQhElement      dd      ?                      ; 04:queue element link pointer
+.wQhInterval     dw      ?                      ; 08:queue head interval (is not specification standard, just for BIOS process conveniently)
+}
+struc TD_UHC                                    ; Transfer Descriptor data structure
+{
+.dTdLink         dd      ?                      ; 00:TD link pointer
+.wTdActLen       dw      ?                      ; 04:TD actual length (ActLen)
+.bTdStatus       db      ?                      ; 06:TD status
+                                                ;       bit7:         Active
+                                                ;       bit6:         Stalled
+                                                ;       bit5:         Data Buffer Error
+                                                ;       bit4:         Babble Detected
+                                                ;       bit3:         NAK Received
+                                                ;       bit2:         CRC/Time Out Error
+                                                ;       bit1:         Bitstuff Error
+                                                ;       bit0:         Reserved
+.bTdControl      db      ?                      ; 07:TD control
+                                                ;       bit7-6:       reserved
+                                                ;       bit5:         Short Packet Detect (SPD)
+                                                ;       bit4-3:       Error Counter (C_ERR)
+                                                ;       bit2:         Low Speed Device (LS)
+                                                ;       bit1:         Isochronous Select (ISO)
+                                                ;       bit0:         Interrupt On Complete (IOC)
+.dTdToken        dd      ?                      ; 08:TD token
+                                                ;       bit31-21:     Maximum Length (MaxLen)
+                                                ;       bit20:        Reserved
+                                                ;       bit19:        Data Toggle (D)
+                                                ;       bit18-15:     Endpoint (EndPt)
+                                                ;       bit14-8:      Device Address
+                                                ;       bit7-0:       Packet Identification (PID)
+.dTdPoint        dd      ?                      ; 0C:TD buffer pointer
+}
+  TD_UHC__SPD             EQU     00100000b     ; Short Packet Detect
+  TD_UHC__C_ERR           EQU     00011000b     ; Error Counter
+  TD_UHC__LS              EQU     00000100b     ; Low Speed Device
+  TD_UHC__IOS             EQU     00000010b     ; Isochronous Select
+  TD_UHC__ISS_IOC         EQU     00000001b     ; Issue Interrupt On Complete
+
+TD_UHC__DEF_CTRL      EQU     00111000b         ; default control byte
+
+  TD_UHC__STS_ACTIVE      EQU     10000000b     ; Status - Active
+  TD_UHC__STS_STALLED     EQU     01000000b     ; Status - Stalled
+  TD_UHC__STS_DATA        EQU     00100000b     ; Status - Data Buffer Error
+  TD_UHC__STS_BABBLE      EQU     00010000b     ; Status - Babble Detected
+  TD_UHC__STS_NAK         EQU     00001000b     ; Status - NAK Received
+  TD_UHC__STS_CRC         EQU     00000100b     ; Status - CRC / Timeout Error
+  TD_UHC__STS_BITSTUFF    EQU     00000010b     ; Status - Bit Stuff Error
+  TD_UHC__STS_ERROR       EQU     01111110b     ; all error status bit
+
+  TD_UHC__TOKEN_MAX_LEN         EQU     0FFE00000H      ;Max number of data bytes
+  TD_UHC__TOKEN_DATA_TOGGLE     EQU     00080000H       ;Data Toggle Bit
+  TD_UHC__TOKEN_ENDPOINT        EQU     00078000H       ;Endpoint Number
+  TD_UHC__TOKEN_DEV_ADDR        EQU     00007F00H       ;Device Address
+  TD_UHC__TOKEN_PID             EQU     000000FFH       ;Packet ID: IN, OUT, SETUP
+
+    TD_UHC__TOKEN_PID__BIT_MAXL        EQU     21
+    TD_UHC__TOKEN_PID__BIT_EP          EQU     15
+    TD_UHC__TOKEN_PID__BIT_ADDR        EQU     8
+
+         ; Packet Identification (PID) definition
+         PID_OUT_UHCI         EQU     0E1H
+         PID_IN_UHCI          EQU     069H
+         PID_SETUP_UHCI       EQU     02DH
+
+;[]=====.=======|===============================*==============[]
+;{}     UHCI I/O REGISTER DEFINITION
+;[]=====.=======|===============================*==============[]
+USBCMD          EQU     0H              ;00 - 01H Command register
+  USBCMD__MAX_PACKET      EQU     80H             ;Max. Packet, 1=64 bytes, 0=32 bytes
+  USBCMD__CONFIG          EQU     40H             ;Configure Flag
+  USBCMD__SWDBG           EQU     20H             ;Software Debug, 1=debug mode, 0=normal
+  USBCMD__FGR             EQU     10H             ;Force Global Resume
+  USBCMD__EGSM            EQU     08H             ;Enter Global Suspend Mode
+  USBCMD__GRESET          EQU     04H             ;Global Reset
+  USBCMD__HCRESET         EQU     02H             ;Host Controller Reset
+  USBCMD__RS              EQU     01H             ;Run / Stop
+USBSTS          EQU     2H              ;02 - 03H USB status
+  USBSTS__HCHALTED        EQU     20H             ;Host Controller Halted
+  USBSTS__HCPE            EQU     10H             ;Host Controller Process Error
+  USBSTS__PBE             EQU     08H             ;PCI Bus Error
+  USBSTS__RD              EQU     04H             ;Resume Detect
+  USBSTS__UEI             EQU     02H             ;USB Error Interrupt
+  USBSTS__USBINT          EQU     01H             ;USB Interrupt On Complete
+USBINTR         EQU     4H              ;04 - 05H USB interrupt enable
+  USBINTR__SPI             EQU     08H             ;Short Packet Interrupt Enable
+  USBINTR__IOC             EQU     04H             ;Interrupt On Complete Enable
+  USBINTR__RE              EQU     02H             ;Resume Enable
+  USBINTR__TC              EQU     01H             ;Timeout / CRC Enable
+FRNUM           EQU     6H              ;06 - 07H Frame number
+  FRNUM__FRAME_NUMBER    EQU     07FFH           ;Frame Number
+  FRNUM__FRAME_INDEX     EQU     03FFH           ;Frame List Index
+FRBASEADD       EQU     8H              ;08 - 0BH Frame list base address
+  FRBASEADD__BASE_ADDRESS    EQU     0FFFFF000H      ;Base address of the Frame List
+SOFMOD          EQU     0CH             ;0CH Start of frame modify
+  SOFMOD__SOF_TIMING      EQU     07FH            ;SOF Timing Value Adjustment
+                                                  ;Frame Length = 11936 + Adjustment
+PORTSC0         EQU     10H             ;10 - 11H Port 1 status/control
+PORTSC1         EQU     12H             ;12 - 13H Port 2 status/control
+;Bit Fields of PORTSC1 / PORTSC2 Registers
+  PORTSCN__SUSPEND         EQU     1000H           ;Port in Suspend State
+  PORTSCN__PORT_RESET      EQU     0200H           ;1 = Port is in Reset
+  PORTSCN__LOW_SPEED_DEV   EQU     0100H           ;Low Speed Device Attached
+  PORTSCN__RESUME_DETECT   EQU     0040H           ;Resume Detected
+  PORTSCN__LINE_STATUS     EQU     0030H           ;D+ (bit 4) and D- (bit 5) Signals
+  PORTSCN__PORT_EN_CHANGE  EQU     0008H           ;Port Enable /Disable Change
+  PORTSCN__PORT_ENABLE     EQU     0004H           ;Port Enable / Disable
+  PORTSCN__CONN_CHANGE     EQU     0002H           ;Connect Status Change
+  PORTSCN__CURR_CONN       EQU     0001H           ;Current Connect Status
+
+;[]=====.=======|===============================*==============[]
+;{}     UHCI PCI CONFIGURATION REGISTER DEFINITION
+;[]=====.=======|===============================*==============[]
+;PCI configuration registers for USB (function 2 of PIIX3)
+UHCI__REVID           EQU     08H             ;08H Revision ID
+UHCI__CLASSC          EQU     09H             ;09H - 0BH Class Code
+UHCI__USBMLT          EQU     0DH             ;0DH - Master Latency Timer
+UHCI__USBBASE         EQU     20H             ;20 - 23H IO space base address
+UHCI__SBRNUM          EQU     60H             ;60H Serial Bus Release Number
+UHCI__MSTAT           EQU     6AH             ;6AH Miscellaneous status
+;1. LOW BYTE (LEGACY_LO)
+LEGACY_LO       EQU     0C0H            ;0C0 legacy support register low byte Capable of USB operation
+          ;Bit field definition of the legacy support register of PIIX3 function 2
+  LEGACY_LO__PORT60REN       EQU     01H
+  LEGACY_LO__PORT60WEN       EQU     02H
+  LEGACY_LO__PORT64REN       EQU     04H
+  LEGACY_LO__PORT64WEN       EQU     08H
+  LEGACY_LO__USBSMIEN        EQU     10H
+  LEGACY_LO__A20PASSEN       EQU     20H
+  LEGACY_LO__PSTATE          EQU     40H
+  LEGACY_LO__SMIATENDPS      EQU     80H
+  LEGACY_LO__TRAPENABLE      EQU     (PORT60WEN+PORT64WEN)
+;2. HIGH BYTE (LEGACY_HI)
+LEGACY_HI       EQU     0C1H            ;0C1 legacy support register high byte
+  LEGACY_HI__TRAPBY60R       EQU     01H
+  LEGACY_HI__TRAPBY60W       EQU     02H
+  LEGACY_HI__TRAPBY64R       EQU     04H
+  LEGACY_HI__TRAPBY64W       EQU     08H
+  LEGACY_HI__SMIBYUSB        EQU     10H
+  LEGACY_HI__USBPIRQDEN      EQU     20H
+  LEGACY_HI__SMIBYENDPS      EQU     80H
+
+FROM_HOST_TO_DEVICE     = 0
+FROM_DEVICE_TO_HOST     = 10000000b
+
+STD_TYPE                = 00000000b
+FOR_CLASS               = 00100000b
+SPEC_TYPE               = 01000000b
+
+TO_DEVICE               = 0
+TO_INTERFACE            = 00000001b
+TO_POINT                = 00000010b
+TO_ANOTHER              = 00000011b

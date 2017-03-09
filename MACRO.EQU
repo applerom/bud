@@ -1,0 +1,102 @@
+include 'equ\mac_comm.equ'                          ; Common Macroses
+include 'equ\mac_msg.equ'                           ; msg-macroses
+;[]=====.=======|===============================*==============[]
+macro   cr_REQ          request
+{
+        mov     si, request
+        call    copy_Request
+}
+macro   Send_REQ                                ; Standard Request - Direction from REQ__Type, buffer not changing, TotalSize from REQ__Length
+{
+        call    bud_Ctrl.Send_REQ
+        jc      .error
+}
+
+macro   RC__ts          Descriptor, Size        ; Send Request with TotalSize & DATA_buffer
+{
+        cr_REQ  Descriptor                      ; copy to REQ-area (for indexing by "REQ")
+        assume  REQ__Length, Size               ; TotalSize to REQ__Length (then in Send_REQ it set to PARA__TotalSize)
+        Send_REQ
+}
+macro   USB_Req         Descriptor              ; USB Standard Request - Direction from REQ__Type, DATA_buffer, TotalSize from REQ__Length
+{
+        cr_REQ  Descriptor                      ; copy to REQ-area (for indexing by "REQ")
+        Send_REQ
+}
+macro   TrOHC           buffer, Size
+{
+        mov     eax, buffer
+        mov     ecx, Size
+        call    Send_Data_OHC
+        jc      .error
+}
+macro   USB.read        buffer, Size
+{
+        mov     esi, buffer
+        mov     ecx, Size
+        call    bud_R
+        jc      .error
+}
+macro   USB.write       buffer, Size
+{
+        mov     esi, buffer
+        mov     ecx, Size
+        call    bud_W
+        jc      .error
+}
+macro   USB_xd          command, name
+{
+local   .quit, .wait, .repeat, .once_read
+.repeat:
+.
+        mov     dl, command
+        call    cmd_to_xd
+        jc      .error
+.
+.wait:
+;        LOG     "Clear sended buffer"
+        Clear   DATA_buffer
+
+        LOG     ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Get USB Status <<<"
+        RC__ts  rxd_Get_Status_USB, 2
+        LOG.w   "USB Status = ", wDATA_buffer
+
+        test    bDATA_buffer, EP6.full    ;20h;0bb59h
+        jz      .wait
+..
+.once_read:
+        LOG     ">*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>======================="
+        LOG     ">*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>*> Read 128bytes from XD:"
+        LOG     ">*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>*>======================="
+
+        USB.read  SH, 128
+..
+        LOG.d   "                             Signature = ", dSH__Signature
+        LOG.w   "                             Length    = ", wSH__Length
+        LOG.b   "                             CRC       = ", bSH__CRC
+        LOG.b   "                             Command   = ", bSH__Command
+        LOG.d   "                             ID        = ", dSH__ID
+        LOG.d   "======================================== ", d00h_SH__Auth
+        LOG.d   "======================================== ", d04h_SH__Auth
+        LOG.d   "======================================== ", d08h_SH__Auth
+        LOG.d   "======================================== ", d0ch_SH__Auth
+        LOG.d   "======================================== ", d10h_SH__Auth
+        LOG.d   "======================================== ", d14h_SH__Auth
+
+        LOG     ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Clear Buffer <<<"
+        USB_Req rxd_Clear_Buffer
+;        LOG.w   "USB Status  = ", wDATA_buffer
+;pause
+
+        mov     al, command
+        cmp     al, CANCEL_READ_PIN1                   ; ???
+        je      .quit
+
+        cmp     dSH__Signature, STAP_SIGNATURE
+        jnz     name
+        cmp     bSH__Command,   command
+        jnz     name
+        cmp     bSH__CRC,       SHbCRC
+        jnz     name
+.quit:
+}

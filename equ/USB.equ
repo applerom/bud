@@ -1,0 +1,264 @@
+;[]=====.=======|===============================*==============[]
+UHCI            = 0
+UHCI.ID         = 0C0300h
+UHCI.USB_base   = 20h
+UHCI.Mask__USB_base = 0FFE0h
+OHCI            = 10h
+OHCI.ID         = 0C0310h
+OHCI.USB_base   = 10h
+OHCI.Mask__USB_base = 0FFFFF000h
+EHCI            = 20h
+EHCI.ID         = 0C0320h
+EHCI.USB_base   = 10h
+EHCI.Mask__USB_base = 0FFFFFF00h
+;[]=====.=======|===============================*==============[]
+dUSB_Base_Address equ   [USB_Base_Address]
+ wUSB_Base_Address equ word [USB_Base_Address]  ; DW for UHC
+bUSB_type       equ     [USB_type]
+bPort_N         equ     [Port_N]
+bHost_N         equ     [Host_N]
+bNumber_Ports   equ     [Number_Ports]
+wUSB_PCI_Address equ    [USB_PCI_Address]
+wSending_Size   equ     [Sending_Size]
+bSend_Type      equ     [Send_Type]
+
+;[]=====.=======|===============================*==============[]
+TO_DEV_STD      = 0
+FROM_DEV_STD    = 80h
+FROM_DEV_SPEC   = 0c0h
+
+CONTROL_TYPE    = 0
+BULK_TYPE       = 1
+
+;[]=====.=======|===============================*==============[]
+;[]        USB STANDARD DATA DEFINITION                        []
+; Standard device Request data structure
+struc   struc_REQ       bmRequestType, bRequest, wValue, wIndex, wLength
+{
+label .data byte
+.bmRequestType   db     bmRequestType           ;;00:characteristics of request
+.bRequest        db     bRequest                ;;01:specific request
+.wValue          dw     wValue                  ;;02:word sized field that varies
+                                                ;;   according to request
+.wIndex          dw     wIndex                  ;;04:word sized field that varies
+                                                ;;   according to request-typically
+                                                ;;   used to pass an index or offset
+.wLength         dw     wLength                 ;;06:number of bytes to transfer if
+.size = $-.data }                               ;;   there is a data phase
+
+; Standard USB device requests
+GET_STATUS              EQU     0
+CLEAR_FEATURE           EQU     1
+SET_FEATURE             EQU     3
+SET_ADDRESS             EQU     5
+GET_DESCRIPTOR          EQU     6
+SET_DESCRIPTOR          EQU     7
+GET_CONFIGURATION       EQU     8
+SET_CONFIGURATION       EQU     9
+GET_INTERFACE           EQU     10
+SET_INTERFACE           EQU     11
+SYNCH_FRAME             EQU     12
+
+; Descriptor Types
+  DEVICE_DESCRIPTOR     EQU     1
+  CONFIG_DESCRIPTOR     EQU     2
+  STRING_DESCRIPTOR     EQU     3
+  INTERFACE_DESCRIPTOR  EQU     4
+  ENDPOINT_DESCRIPTOR   EQU     5
+  HUB_DESCRIPTOR        EQU     29h             ;R01
+  HID_DESCRIPTOR        equ     21h             ; mouse
+struc struc_DEVDSP {                            ; Device Descriptor data structure definition
+.DDbLength      db      ?
+.DDbDspType     db      ?
+.DDbcdUSB       dw      ?
+.DDbDevClass    db      ?
+.DDbDevSubClass db      ?
+.DDbDevProtocol db      ?
+.DDbMaxPackSize db      ?
+.DDidVendor     dw      ?
+.DDidProduct    dw      ?
+.DDbcdDevice    dw      ?
+.DDiManuf       db      ?
+.DDiProduct     db      ?
+.DDiSerialNum   db      ?
+.DDbNumConfig   db      ?
+.size = $ - .DDbLength }
+
+struc struc_CFGDSP {                            ; Configuration Descriptor data structure definition
+.CDbLength      db      ?
+.CDbDspType     db      ?
+.CDwTotalLen    dw      ?
+.CDbNumInt      db      ?
+.CDbCfgValue    db      ?
+.CDiConfig      db      ?
+.CDbmAttr       db      ?
+.CDMaxPower     db      ? }
+
+struc struc_INTDSP {                            ; Interface Descriptor data structure definition
+.IDbLength      db      ?                       ; do not ALIGN - it follow after CFGDSP
+.IDbDspType     db      ?
+.IDbIntNum      db      ?
+.IDbAltSet      db      ?
+.IDbNumEndp     db      ?
+.IDbClass       db      ?
+.IDbSubClass    db      ?
+.IDbProtocol    db      ?
+.IDbIndex       db      ? }
+
+struc struc_ENDPDSP {                           ; Endpoint Descriptor data structure definition
+.EDbLength      db      ?                       ; do not ALIGN - it follow after CFGDSP & INTDSP
+.EDbDspType     db      ?
+.EDbEndpAddr    db      ?
+.EDbmAttr       db      ?
+.EDwMaxPackSize dw      ?
+.EDbInterval    db      ? }
+
+struc struc_STDCFGDSP {                         ; Standard configuration descriptor data structure
+.StdCDsp        db      SIZE CFGDSP dup(?)
+.StdIDsp        db      SIZE INTDSP dup(?)
+.StdEDsp        db      SIZE ENDPDSP dup(?) }
+
+struc struc_HUBDSP                              ; Hub Descriptor data structure definition
+{
+.HUDbLength      db      ?
+.HUDbDspType     db      ?
+.HUDbNumPort     db      ?
+.HUDbDelay       dw      ?
+.HUDbMaxCurrent  dw      ?
+.HUDbRemovable   db      ?
+.HUDbPwrCtrl     db      ?
+}
+
+GET_STATE               EQU     2               ; Hub class-specific requests
+
+C_HUB_LOCAL_POWER       EQU     0               ; Hub Class Feature Selectors
+C_HUB_OVER_CURRENT      EQU     1
+
+S_PORT_CONNECTION       EQU     0
+S_PORT_ENABLE           EQU     1
+S_PORT_SUSPEND          EQU     2
+S_PORT_OVER_CURRENT     EQU     3
+S_PORT_RESET            EQU     4
+S_PORT_POWER            EQU     8
+S_PORT_LOW_SPEED        EQU     9
+C_PORT_CONNECTION       EQU     16
+C_PORT_ENABLE           EQU     17
+C_PORT_SUSPEND          EQU     18
+C_PORT_OVER_CURRENT     EQU     19
+C_PORT_RESET            EQU     20
+
+struc struc_HUBPORTSTS  {                       ; Hub port status data structure
+.HPSbStatus1    db      ?                       ;;00:Port status field 1
+.HPSbStatus2    db      ?                       ;;01:Port status field 2
+.HPSbChange     db      ?                       ;;02:Port change field
+                db      ? }
+
+HPS_CONNECT     =       00000001b
+HPS_ENABLE      =       00000010b
+HPS_SUSPEND     =       00000100b
+HPS_OVER_CURRENT=       00001000b
+HPS_RESET       =       00010000b
+
+HPS_POWER       =       00000001b
+HPS_LS          =       00000010b
+
+HPC_CONNECT     =       00000001b
+HPC_ENABLE      =       00000010b
+HPC_SUSPEND     =       00000100b
+HPC_OVER_CURRENT=       00001000b
+HPC_RESET       =       00010000b
+
+GET_CLASS_DESCRIPTOR    EQU     0               ; HID class-specific request
+GET_REPORT              EQU     1
+GET_IDLE                EQU     2
+GET_PROTOCOL            EQU     3
+SET_CLASS_DESCRIPTOR    EQU     8
+SET_REPORT              EQU     9
+SET_IDLE                EQU     10
+SET_PROTOCOL            EQU     11
+
+struc struc_HIDDSP                              ; HID class-specific descriptor
+{
+.HIDbLength      db      ?                      ;;00
+.HIDbType        db      ?                      ;;01
+.HIDbcdHID       dw      ?                      ;;02
+.HIDbCountry     db      ?                      ;;04
+.HIDbAvailable   db      ?                      ;;05
+.HIDbClassType   db      ?                      ;;06
+.HIDwRptLength   dw      ?                      ;;07
+}
+struc struc_HIDCFGDSP {                         ; HID configuration descriptor data structure
+.HidCDsp        db      SIZE CFGDSP dup(?)
+.HidIDsp        db      SIZE INTDSP dup(?)
+.HidEDsp        db      SIZE ENDPDSP dup(?)
+.HidHDsp        db      SIZE HIDDSP dup(?) }
+
+MAX_DESP_LEN    =       256
+MAX_HUB         =       8
+MAX_KBD         =       8
+MAX_MS          =       8
+MAX_CTLBUFF     =       8
+WAIT_ACK_COUNT  =       50
+
+;[]=====.=======|===============================*==============[]
+;*      AWARD USB BIOS DATA STRUCTURE DEFINITION
+;[]=====.=======|===============================*==============[]
+; USB Task data structure
+struc struc_TASK {
+.wTkLink        dw      ?                       ;;00:task link(terminated with 0FFFFh)
+.bTkDevStatus   db      ?                       ;;02:device status
+.bTkDevIndex    db      ?                       ;;03:BIOS supported device index number
+.bTkDevAddr     db      ?                       ;;04:device address
+.bTkDevEndp     db      ?                       ;;05:device endpoint
+.bTkParentAddr  db      ?                       ;;06:parent device address
+.bTkParentPort  db      ?                       ;;07:parent device port number
+.wTkInterval    dw      ?                       ;;08:frame list interval
+.wTkPacketSize  dw      ?                       ;;0A:packet size
+.wTkQueueHead   dw      ?                       ;;0C:task queue head
+.wTkTransDesp   dw      ?                       ;;0E:task transfer descriptor
+.wTkProc        dw      ?                       ;;10:task process routine
+.wTkCtrlBuffer  dw      ?                       ;;12:task control buffer
+.wTkDataBuffer  dw      ?                       ;;14:task data buffer
+.bTkDevInterface db     ? }                     ;R02;16:device interface
+
+
+; Bit definition of bTkDevStatus
+TK_WFP          EQU     00000001b               ;bit0=wait for process if interrupt
+TK_LS           EQU     00000010b               ;bit1=low speed device
+TK_KBD          EQU     00000100b               ;bit2=USB keyboard
+TK_MS           EQU     00001000b               ;bit3=USB mouse
+TK_HUB          EQU     00010000b               ;bit4=USB hub
+TK_NEWKBD       EQU     00100000b               ;R02;bit5=keyboard for HID v1.0 final
+
+struc struc_HUBCTRL {                           ; Hub Control data structure
+.bHcNumPort      db      ? }                    ;;number of ports
+
+struc struc_KBDCTRL {                           ; Keyboard control data structure
+.CurrentBuffer   db      32 dup(?)
+.LastBuffer      db      32 dup(?)
+.KeyBuffer       db      16 dup(?)
+.bStatusFlag     db      ?
+.bBiosFlag       db      ?
+.bCurrentIndex   db      ?
+.bLastIndex      db      ?
+.bCurrentKey     db      ?
+.bRelocKey       db      ?
+.bKeyPoint       db      ?
+.bKeyLength      db      ?
+.bDelayCount     db      ?
+.bDelayRate      db      ?
+.bRepeatRate     db      ? }
+
+; bStatusFlag bit definition
+VLTSHFT          =       00000010b       ;vitual LtShift Status
+VRTSHFT          =       00000001b       ;vitual RtShift Status
+
+; bBiosFlag bit  defini  tion
+INSERT           =       10000000b       ;Bit 7 : Insert active
+CAPSLOCK         =       01000000b       ;Bit 6 : Caps Lock active
+NUMLOCK          =       00100000b       ;Bit 5 : Num Lock active
+SCRLLOCK         =       00010000b       ;Bit 4 : Scroll Lock active
+ALT              =       00001000b       ;Bit 3 : Alt pressed
+CTRL             =       00000100b       ;Bit 2 : Ctrl pressed
+LTSHFT           =       00000010b       ;Bit 1 : Left Shift pressed
+RTSHFT           =       00000001b       ;Bit 0 : Right Shift pressed

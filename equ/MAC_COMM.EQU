@@ -1,0 +1,162 @@
+; Common Macroses
+;[]=====.=======|===============================*==============[]
+macro   _%
+{
+if MODE > 0
+}
+macro   %_
+{
+end if
+}
+macro   _%_             mode_
+{
+if MODE and mode_ > 0
+}
+macro   include.if_DEBUG file
+{ _%_   DEBUG
+include file
+%_ }
+macro   include.if      mode, file
+{ _%_   mode
+include file
+%_ }
+macro   .
+{
+        call    Delay_1ms
+}
+macro   ..
+{
+        call    Delay_12ms
+}
+macro   ...
+{
+        call    Wait_Stable                             ; 180ms
+}
+macro   dz              var, string             ; for zero-ending string...
+{
+        var     db      string, 0
+}
+macro   zb              var                     ; Zero Byte
+{
+        var     db      0
+}
+macro   zw              var                     ; Zero Word
+{
+        var     dw      0
+}
+macro   zd              var                     ; Zero Dword
+{
+        var     dd      0
+}
+macro   assume          op1, op2                ; assume - for seg->seg operations
+{
+      push op2
+      pop  op1
+}
+macro   mov_wb          var_word, var_byte      ; assume - for seg->seg operations
+{
+      push ax
+        movzx   ax, var_byte
+        mov     var_word, ax
+      pop  ax
+}
+macro   mov_bb          var_byte1, var_byte2    ; assume - for seg->seg operations
+{
+      push ax
+        mov     al, var_byte2
+        mov     var_byte1, al
+      pop  ax
+}
+macro   mov_dw          var_dword, var_word     ; assume - for seg->seg operations
+{
+      push eax
+        movzx   eax, var_word
+        mov     var_dword, eax
+      pop  eax
+}
+macro   push.all
+{
+      pushfd
+      pushad
+      push ds es
+        mov     ax, ss
+        mov     wSave_SS, ax                    ; Store SP for quick exit (by F10 or error)
+        mov     ax, sp
+        mov     wSave_SP, ax
+}
+macro   pop.all
+{
+        mov     ax, wSave_SS
+        mov     ss, ax
+        mov     ax, wSave_SP
+        mov     sp, ax                          ; Restore SP for quick exit (by F10 or error)
+      pop  es ds
+      popad
+      popfd
+}
+macro   stop
+{
+        jmp     xd.stop
+}
+macro   stop.error
+{
+        jmp     xd.error
+}
+macro   exit
+{
+        jmp     .exit
+}
+macro   if_ax_0.exit
+{
+        or      ax, ax
+        jz      .exit
+}
+macro   cmp_____USB_type__UHCI_OHCI_EHCI
+{
+        cmp     bUSB_type, UHCI
+        je      .UHCI
+        cmp     bUSB_type, OHCI
+        je      .OHCI
+        cmp     bUSB_type, EHCI
+        je      .EHCI
+}
+macro   linear_eax     Value                    ; mov
+{
+        mov     ax, Value
+        call    Physical_Linear
+}
+macro   linear  Value, Offset
+{
+    linear_eax  Offset
+        mov     Value, eax
+}
+macro   Clear   Buffer
+{
+      pushad
+        mov     edi, Buffer
+        mov     ecx, Buffer#.size
+        call    Clear_32bit
+      popad
+}
+macro   cls
+{ ;_%_  0;_   not MODE;(run_in.DOS or run_in.BIOS) and (not MODE)
+        mov     ax, 3
+        int     10h
+;%_
+ }
+
+macro   Store_Video_mode
+{ ;_%_  0;_   not MODE;(run_in.DOS or run_in.BIOS) and (not MODE)
+        mov     ah, 0Fh
+        int     10h
+        mov     bVideoMode, al                 ; Запоминаем видеорежим
+;%_
+}
+
+macro   Restore_Video_mode
+{; _%_  0;_   not MODE;(run_in.DOS or run_in.BIOS) and (not MODE)
+        mov     ah, 0                           ; Переустановить текстовый режим и очистить экран
+        mov     al, bVideoMode
+        int     10h
+;%_
+ }

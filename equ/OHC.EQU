@@ -1,0 +1,270 @@
+dHC                             equ     dword [es:edx]
+off_TD_OHC                      equ     ebp
+ED_OHC__F_K_S_D_EN_FA           equ     [es:vED_OHC.wEdControl] ; ED_OHC
+ED_OHC__MPS                     equ     [es:vED_OHC.wEdMps]
+ED_OHC__TailP                   equ     [es:vED_OHC.dEdTailP]
+ED_OHC__HeadP                   equ     [es:vED_OHC.dEdHeadP]
+ED_OHC__NextED                  equ     [es:vED_OHC.dEdNextED]
+wED_OHC_dummy__F_K_S_D_EN_FA    equ     [es:vED_OHC_dummy.wEdControl] ; ED_OHC_dummy
+wED_OHC_dummy__MPS              equ     [es:vED_OHC_dummy.wEdMps]
+dED_OHC_dummy__TailP            equ     [es:vED_OHC_dummy.dEdTailP]
+dED_OHC_dummy__HeadP            equ     [es:vED_OHC_dummy.dEdHeadP]
+dED_OHC_dummy__NextED           equ     [es:vED_OHC_dummy.dEdNextED]
+wTD_OHC__Task                   equ     [es:vTD_OHC.wTdTask] ; TD_OHC
+TD_OHC__CC_EC_T_DI_DP_R         equ     [es:vTD_OHC.wTdControl]
+TD_OHC__CBP                     equ     [es:vTD_OHC.dTdCBP]
+TD_OHC__NextTD                  equ     [es:vTD_OHC.dTdNextTD]
+TD_OHC__BE                      equ     [es:vTD_OHC.dTdBE]
+wTD_OHC_dummy__Task             equ     [es:vTD_OHC_dummy.wTdTask] ; TD_OHC_dummy
+wTD_OHC_dummy__CC_EC_T_DI_DP_R  equ     [es:vTD_OHC_dummy.wTdControl]
+dTD_OHC_dummy__CBP              equ     [es:vTD_OHC_dummy.dTdCBP]
+dTD_OHC_dummy__NextTD           equ     [es:vTD_OHC_dummy.dTdNextTD]
+dTD_OHC_dummy__BE               equ     [es:vTD_OHC_dummy.dTdBE]
+;[]=====.=======|===============================*==============[]
+struc   struc_ED_OHC                            ; Endpoint Descriptor data structure    - дескриптор конечной точки OHC
+{       label .data byte
+.wEdControl      dw      ?                      ; 00:ED control (поля управления описаны ниже)
+                                                ;       bit15:        Format
+                                                ;       bit14:        Skip
+                                                ;       bit13:        Speed
+                                                ;       bit12-11:     Direction
+                                                ;       bit10-7:      Endpoint Number
+                                                ;       bit6-0:       Function Address
+.wEdMps          dw      ?                      ; 02:ED Maximum Packet Size - максимальный размер пакета
+                                                ;       bit15-11:     Interval (Award BIOS definition)
+                                                ;       bit10-0:      Maximum Packet Size
+.dEdTailP        dd      ?                      ; 04:TD Queue Tail Pointer - Указатель на конец очереди TD (если совпадает с HeadP - очередь пуста)
+.dEdHeadP        dd      ?                      ; 08:TD Queue Head Pointer - Указатель на очередной TD, который должен быть исполнен для данной точки
+.dEdNextED       dd      ?                      ; 0C:Next Endpoint descriptor - Указатель на дескриптор следующей конечной точки (если ноль, то эта точка - последняя в списке)
+.size = $-.data
+}
+  ED_OHC__FA     EQU     007FH                  ; Function Address - адрес устройства
+  ED_OHC__EN     EQU     0780H                  ; Endpoint Number  - номер точки
+  ED_OHC__DIR    EQU     1800H                  ; Direction        - направление передачи:
+                                                ;       01 - OUT
+                                                ;       10 - IN
+                                                ;       11 - брать из поля PID дескриптора передачи TD
+  ED_OHC__SPEED  EQU     2000H                  ; Speed - скорость: 0 - FS, 1 - LS
+  ED_OHC__SKIP   EQU     4000H                  ; Skip  - пропустить (не начинать транзакции с данной точкой)
+  ED_OHC__FORMAT EQU     8000H                  ; Format- признак формата TD, связанного с данной точкой:
+                                                ;       0 - общий (Bulk, Control, Interrupt)
+                                                ;       1 - дескриптор изохронной передачи
+  ED_OHC__BIT_EN EQU     7                      ; Смещение EN - номера точки
+  ED_OHC__BIT_DIR EQU    11
+
+  ED_OHC__MPS_MAX         EQU     07FFH         ; Max. Packet Size - максимальный размер пакета
+        ; EDINT - Not Used by HostController - only for Award
+  ED_OHC__EDINT           EQU     0F800h        ; interval
+  ED_OHC__BIT_EDINT       EQU     11
+
+; Bit definition of TD Queue Head Point (dEdHeadP)
+HALT            EQU     01H                     ; Halted
+TGCR            EQU     02H                     ; Toggle Carry
+
+;[]=====.=======|===============================*==============[]
+struc   struc_TD_OHC                            ; Transfer Descriptor data structure
+{ label .data byte
+.wTdTask         dw      ?                      ; 00:Task Pointer(Award definition - не используется контроллером)
+                                                ;       bit15-12:     Condition Code
+                                                ;       bit11-10:     Error Count
+                                                ;       bit9-8:       Data Toggle
+                                                ;       bit7-5:       Delay Interrupt
+                                                ;       bit4-3:       Direction/PID
+                                                ;       bit2:         Buffer Rounding
+                                                ;       bit1-0:       reserved
+.wTdControl      dw      ?                      ; 02:TD control
+.dTdCBP          dd      ?                      ; 04:CBP(Current Buffer Pointer) - текущий физический адрес в буфере,
+                                                ;       по которому будет записан или прочитан очередной передаваемый пакет.
+                                                ;       После успешного завершения передачи поле обнуляется,
+                                                ;       при нештатном завершении - указывает на текущее положение.  (описание битов ниже)
+                                                ;
+.dTdNextTD       dd      ?                      ; 08:Next TD - указатель на следующий дескриптор передачи для данной точки.
+.dTdBE           dd      ?                      ; 0C:BE (Buffer End) - физический адрес последнего байта в буфере для данного TD
+.size = $-.data
+}
+  TD_OHC__ROUNDING        EQU     00004H        ; R (bufferRounding) - требование совпадения длины последнего принимаемого пакета с
+                                                ; объявленныой длиной буфера (обнаружение коротких пакетов):
+                                                ;       0 - сообщать об ошибке, если длина последнего пакета меньше длины буфера
+                                                ;       1 - не реагировать на несовпадение длины
+  TD_OHC__DIRECTION_PID  EQU     00018H         ; DP (Direction/PID) - тип маркера (направление, должно соответствовать полю D в ED):
+     TD_OHC__BIT_DP          EQU     3          ;       00 - SETUP
+        TD_OHC__PID_SETUP       EQU     00b     ;       01 - OUT
+        TD_OHC__PID_OUT         EQU     01000b     ;       10 - IN
+        TD_OHC__PID_IN          EQU     10000b     ;       01 - reserved
+  TD_OHC__DELAYINT        EQU     000E0H        ; DI (DelayInterrupt) - задержка прерывания по отработке передачи:
+                                                ;       000-110 - задержка (число пропущенных кадров)
+                                                ;       101 - не вызывать прерывание
+  TD_OHC__DATOGMSB        EQU     00200H        ; MSB of Data Toggle bit
+  TD_OHC__DATOGLSB        EQU     00100H        ; LSB of Data Toggle bit
+  TD_OHC__DATATOGGLE      EQU     00300H        ; Вместе с битом C (toggleCarry) из ED_OHC обеспечивает обеспечивает корректное переключение
+    TD_OHC__BIT_DATATOGGLE equ     8            ; при передаче данных, описанных серией TD. При постановке в очередь TD:
+                                                ; - для передач типов Bulk и Interrupt драйвер должен установить T = 00
+                                                ; - для передач типа Control в фазе Setup драйвер должен установить T = 10
+                                                ; - в фазе Status и в первой фазе данных - T = 11
+                                                ; Дальнейшие модификации поля выполняет контроллер.
+  TD_OHC__EC              EQU     00C00H        ; EC (ErrorCount) - счетчик ошибок передачи для текущей транзакции.
+                                                ; Если EC = 2, происходит ошибка, ее код помещается в CC и вся передача аварийно завершается.
+                                                ; При успешном завершении транзакции счетчик обнуляется
+  TD_OHC__CC              EQU     0F000H        ; СС (Condition Code) - состояние последней попытки транзакции
+
+TD_OHC__DEF_CTRL        EQU     0F2E4H          ; default TD Control
+                                                ; Buffer rounding       = 1
+                                                ; PID                   = 00 = SETUP
+                                                ; no delay interrupt    = 000
+                                                ; use TD's data toggle  = 10 = SETUP
+                                                ; Error Count           = 00
+                                                ; Condition Code        = 1111 = NOTACCESSED (не было обработки)
+                                                ; драйвер записывает этот код в TD перед помещением его в очередь.
+TD_OHC__DEF_BULK_OUT    EQU     0F0ECH          ; default TD Bulk OUT
+                                                ; Buffer rounding       = 1
+                                                ; PID                   = 01 = OUT
+                                                ; no delay interrupt    = 000
+                                                ; use TD's data toggle  = 00 = BULK/INTERRUPT
+                                                ; Error Count           = 00
+                                                ; Condition Code        = 1111 = NOTACCESSED (не было обработки)
+                                                ; драйвер записывает этот код в TD перед помещением его в очередь.
+TD_OHC__DEF_BULK_IN     EQU     0F0F4H          ; default TD Bulk IN
+                                                ; Buffer rounding       = 1
+                                                ; PID                   = 10 = IN
+                                                ; no delay interrupt    = 000
+                                                ; use TD's data toggle  = 00 = BULK/INTERRUPT
+                                                ; Error Count           = 00
+                                                ; Condition Code        = 1111 = NOTACCESSED (не было обработки)
+                                                ; драйвер записывает этот код в TD перед помещением его в очередь.
+;[]=====.=======|===============================*==============[]
+;{}     OHCI I/O REGISTER DEFINITION
+;[]=====.=======|===============================*==============[]
+HcRevision              EQU     00h
+HcControl               EQU     04h
+  HcControl__CBSR         EQU     03H
+  HcControl__PLE          EQU     04H
+  HcControl__IE           EQU     08H
+  HcControl__CLE          EQU     10H
+  HcControl__BLE          EQU     20H
+  HcControl__HCFS         EQU     0C0H          ; HostControllerFunctionalStatus
+    USBRESET        EQU     00h                 ; Host Controller Functional States:
+    USBRESUME       EQU     40h
+    USBOPERATIONAL  EQU     80h
+    USBSUSPEND      EQU     0C0h
+    USBSMI          EQU     100h
+  HcControl__IR           EQU     100H
+  HcControl__RWC          EQU     200H
+  HcControl__RWE          EQU     400H
+  HcControl___not_PLE_IE_CLE_BLE equ not (HcControl__PLE + HcControl__IE + HcControl__CLE + HcControl__BLE)
+HcCommandStatus         EQU     08h
+  HcCommandStatus__HCR    EQU     01H           ; HostControllerReset
+  HcCommandStatus__CLF    EQU     02H           ; ControlListFilled
+  HcCommandStatus__BLF    EQU     04H           ; BulkListFilled
+  HcCommandStatus__OCR    EQU     08H           ; OwnershipChangeRequest
+  HcCommandStatus__SOC    EQU     30000H        ; SchedulingOverrunCount
+HcInterruptStatus       EQU     0Ch
+  HcInterruptStatus__WDH  EQU     02H           ; WritebackDoneHead
+  HcInterruptStatus__RHSC EQU     40H           ; Root Hub Status Change
+  HcInterruptStatus__OC   EQU     40000000h     ; R02;OwnershipChange
+  HcInterruptStatus__MIE  EQU     80000000h
+HcInterruptEnable       EQU     10h
+  HcInterruptEnable__ENAB_WDH  EQU 00000002H    ; Write back DoneHead
+  HcInterruptEnable__ENAB_SF   EQU 00000004H    ; Start of Frame
+  HcInterruptEnable__ENAB_FNO  EQU 00000020H    ; Frame Number Overflow
+  HcInterruptEnable__ENAB_RHSC EQU 00000040H    ; Root Hub Status Change
+  HcInterruptEnable__ENAB_MIE  EQU 80000000H    ; Master Interrupt Enable
+HcInterruptDisable      EQU     14h
+  HcInterruptDisable__DIS_WDH  EQU 00000002H    ; Write back DoneHead
+  HcInterruptDisable__DIS_SF   EQU 00000004H    ; Start of Frame
+  HcInterruptDisable__DIS_FNO  EQU 00000020H    ; Frame Number Overflow
+  HcInterruptDisable__DIS_RHSC EQU 00000040H    ; Root Hub Status Change
+  HcInterruptDisable__DIS_MIE  EQU 80000000H    ; Master Interrupt Enable
+
+HcHCCA                  EQU     18h
+HcPeriodCurrentED       EQU     1Ch
+
+HcControlHeadED         EQU     20h             ; Физический адрес ПЕРВОГО дескриптора точки управления (биты [3:0]), устанавливается ДРАЙВЕРОМ
+HcControlCurrentED      EQU     24h             ; Физический адрес ТЕКУЩЕГО дескриптора точки управления (биты [3:0]), устанавливается КОНТРОЛЛЕРОМ
+
+HcBulkHeadED            EQU     28h             ; Физический адрес ПЕРВОГО дескриптора точки передачи массивов (биты [3:0]), устанавливается ДРАЙВЕРОМ
+HcBulkCurrentED         EQU     2Ch             ; Физический адрес ТЕКУЩЕГО дескриптора точки передачи массивов (биты [3:0]), устанавливается КОНТРОЛЛЕРОМ
+
+HcDoneHead              EQU     30h
+
+HcFmInterval            EQU     34h
+  HcFmInterval__FI        EQU     00003FFFH
+  HcFmInterval__FSMPS     EQU     7FFF0000H
+  HcFmInterval__FIT       EQU     80000000H
+HcFmRemaining           EQU     38h
+HcFmNumber              EQU     3Ch
+HcPeriodicStart         EQU     40h
+  HcPeriodicStart__NDP    EQU     0FFH          ; Number of Downstream Ports
+  HcPeriodicStart__PSM    EQU     100H          ; Power Switching Mode
+  HcPeriodicStart__POTPGT EQU     0FF000000H    ; Power on to power good delay
+HcLSThreshold           EQU     44h
+HcRhDescriptorA         EQU     48h
+HcRhDescriptorB         EQU     4Ch
+  HcRhDescriptorB__PPCM   EQU     0FFFF0000H    ;Port power control mask
+HcRhStatus              EQU     50h
+  HcRhStatus__LPSC      EQU     00010000h       ; LocalPowerStatusChange
+HcRhPortStatusN         EQU     54h
+  HcRhPortStatusN__CCS    EQU     00000001h     ; Current Connect Status (read)
+  HcRhPortStatusN__CPE    EQU     00000001h     ; Clear Port Enable (write)
+  HcRhPortStatusN__PES    EQU     00000002h     ; Port Enable Status (read)
+  HcRhPortStatusN__SPE    EQU     00000002h     ; Set Port Enable (write)
+  HcRhPortStatusN__PSS    EQU     00000004h     ; Port Suspend Status (read)
+  HcRhPortStatusN__SPS    EQU     00000004h     ; Set Port Suspend (write)
+  HcRhPortStatusN__POCI   EQU     00000008h     ; Port Over Current Indicator (read)
+  HcRhPortStatusN__CSS    EQU     00000008h     ; Clear Suspend Status (write)
+  HcRhPortStatusN__PRS    EQU     00000010h     ; Port Reset Status (read)
+  HcRhPortStatusN__SPR    EQU     00000010h     ; Set Port Reset (write)
+  HcRhPortStatusN__PPS    EQU     00000100h     ; Port Power Status (read)
+  HcRhPortStatusN__SPP    EQU     00000100h     ; Set Port Power (write)
+  HcRhPortStatusN__LSDA   EQU     00000200h     ; Low Speed Device Attach (read)
+  HcRhPortStatusN__CPP    EQU     00000200h     ; Clear Port Power (write)
+  HcRhPortStatusN__CSC    EQU     00010000h     ; Connect Status Change
+  HcRhPortStatusN__PESC   EQU     00020000h     ; Port Enable Status Change
+  HcRhPortStatusN__PSSC   EQU     00040000h     ; Port Suspend Status Change
+  HcRhPortStatusN__OCIC   EQU     00080000h     ; Port Over Current Indicator Change
+  HcRhPortStatusN__PRSC   EQU     00100000h     ; Port Reset Status Change
+
+  HcRhPortStatusN__ALLSC  EQU     HcRhPortStatusN__PRSC+HcRhPortStatusN__OCIC+HcRhPortStatusN__PSSC+HcRhPortStatusN__PESC+HcRhPortStatusN__CSC ; all status change bits
+HcRhPortStatus1         equ     54h
+HcRhPortStatus2         equ     58h
+HcRhPortStatus3         equ     5Ch
+;[]=====.=======|===============================*==============[]
+; Control Bulk Service Ratio
+CBSR1           EQU     0               ;1:1
+CBSR2           EQU     1               ;2:1
+CBSR3           EQU     2               ;3:1
+CBSR4           EQU     3               ;4;1
+
+
+macro   get_OHC Rx
+{       mov     edx, Rx
+        call    OHC.get }
+
+macro   set_OHC Rx, Value
+{       mov     eax, Value
+        mov     edx, Rx
+        call    OHC.set }
+
+macro   or_OHC  Rx, Value
+{       mov     eax, Value
+        mov     edx, Rx
+        call    OHC.or }
+
+macro   and_OHC Rx, Value
+{       mov     eax, Value
+        mov     edx, Rx
+        call    OHC.and }
+
+macro   cmd_OHC Value
+{       mov     eax, Value
+        mov     edx, HcCommandStatus
+        call    OHC.cmd }
+
+macro   cmd_or_OHC  Value
+{       mov     eax, Value
+        mov     edx, HcCommandStatus
+        call    OHC.or }
+
+macro   cmd_and_OHC Value
+{       mov     eax, Value
+        mov     edx, HcCommandStatus
+        call    OHC.and }

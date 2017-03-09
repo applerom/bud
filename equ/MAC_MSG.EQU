@@ -1,0 +1,573 @@
+; msg-macroses
+;[]=====.=======|===============================*==============[]
+macro   LOG.create      string
+{ _%_   LOG.ON
+local   .quit, .text
+        mov     si, .text
+        call    LOG_file.create
+        jmp     .quit
+.text   db      string, 0
+.quit:
+%_ }
+macro   LOG.close
+{ _%_   LOG.ON
+        call    LOG_file.close
+%_ }
+macro   LOG             string
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pusha
+        mov     si, .text
+        call    LOG_file.write
+;  msg_  .text
+        LOG^   _BK
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popa
+      popf
+%_ }
+macro   LOG@            string
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pusha
+        mov     si, .text
+        call    LOG_file.write
+;  msg_  .text
+        LOG^    _comma
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popa
+      popf
+%_ }
+macro   LOG_            string
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pusha
+        mov     si, .text
+        call    LOG_file.write
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popa
+      popf
+%_ }
+macro   LOG^    offset.string
+{ _%_ LOG.ON
+      pushf
+      pusha
+        mov     si, offset.string
+        call    LOG_file.write
+      popa
+      popf
+%_ }
+macro   LOG_^   string_, offset.string_
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pusha
+        LOG^    .text
+        mov     si, offset.string_
+        call    LOG_file.write
+        LOG^    _comma;BK
+        jmp     .quit
+.text   db      string_, 0
+.quit:
+      popa
+      popf
+%_ }
+macro   b_LOG           var.byte                ; LOG to DS:SI
+{ _%_ LOG.ON
+      pushf
+      pusha
+        mov     al, var.byte
+;  _al_
+        call    convert.al
+        call    LOG_file.write                  ; to SI returned converted datas
+      popa
+      popf
+%_ }
+macro   w_LOG           var.word                ; LOG to DS:SI
+{ _%_ LOG.ON
+      pushf
+      pusha
+        mov     ax, var.word
+;  _ax_
+        call    convert.ax
+        call    LOG_file.write                  ; to SI returned converted datas
+      popa
+      popf
+%_ }
+macro   d_LOG           var.dword               ; LOG to DS:SI
+{ _%_ LOG.ON
+      pushf
+      pushad
+        mov     eax, var.dword
+;  _eax_
+        call    convert.eax                     ; to SI returned converted datas
+        call    LOG_file.write
+      popad
+      popf
+%_ }
+macro   LOG.b           string, var.byte
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pushad
+;  msg   .text
+        mov     si, .text
+        call    LOG_file.write
+      popad
+        b_LOG   var.byte
+        LOG^    _BK
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popf
+%_ }
+macro   LOG.b@          string, var.byte
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pushad
+;  msg   .text
+        mov     si, .text
+        call    LOG_file.write
+      popad
+        b_LOG   var.byte
+        LOG^    _comma
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popf
+%_ }
+macro   LOG.b_          string, var.byte
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pushad
+;  msg   .text
+        mov     si, .text
+        call    LOG_file.write
+      popad
+        b_LOG   var.byte
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popf
+%_ }
+macro   LOG.w           string, var.word
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pushad
+;  msg   .text
+        mov     si, .text
+        call    LOG_file.write
+      popad
+        w_LOG   var.word
+        LOG^    _BK
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popf
+%_ }
+macro   LOG.w@          string, var.word
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pushad
+;  msg   .text
+        mov     si, .text
+        call    LOG_file.write
+      popad
+        w_LOG   var.word
+        LOG^    _comma
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popf
+%_ }
+macro   LOG.w_          string, var.word
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pushad
+;  msg   .text
+        mov     si, .text
+        call    LOG_file.write
+      popad
+        w_LOG   var.word
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popf
+%_ }
+macro   LOG.d           string, var.dword
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pushad
+;  msg   .text
+        mov     si, .text
+        call    LOG_file.write
+      popad
+        d_LOG   var.dword
+        LOG^    _BK
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popf
+%_ }
+macro   LOG.d@          string, var.dword
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pushad
+;  msg   .text
+        mov     si, .text
+        call    LOG_file.write
+      popad
+        d_LOG   var.dword
+        LOG^    _comma
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popf
+%_ }
+macro   LOG.d_          string, var.dword
+{ _%_ LOG.ON
+local   .quit, .text
+      pushf
+      pushad
+;  msg   .text
+        mov     si, .text
+        call    LOG_file.write
+      popad
+        d_LOG   var.dword
+        jmp     .quit
+.text   db      string, 0
+.quit:
+      popf
+%_ }
+macro   _@
+{ _%
+      pushf
+      pushad
+        call    vyvod.comma
+      popad
+      popf
+%_ }
+macro   BK                                      ; BO3BPAT KAPETKU
+{ _%
+pushf
+pushad
+        call    vyvod.BK
+popad
+popf
+%_ }
+macro   msg      txt                            ; output message in DS:SI
+{ _%
+pushf
+pusha
+        mov     si, txt
+        call    vyvod
+popa
+popf
+%_ }
+macro   msg_    txt                             ; output message in DS:SI
+{ _%
+msg     txt
+BK
+%_ }
+macro   msg@    txt                             ; output message in DS:SI
+{ _%
+msg     txt
+_@
+%_ }
+macro   _al                                     ; output AL
+{ _%
+pushf
+pusha
+        call    vyvod.al
+popa
+popf
+%_ }
+macro   _al_                                    ; output AL and BK
+{ _%
+pushf
+pusha
+        call    vyvod.al
+BK
+popa
+popf
+%_ }
+macro   _al@                                    ; output AL and BK
+{ _%
+pushf
+pusha
+        call    vyvod.al
+_@
+popa
+popf
+%_ }
+macro   _ax                                     ; output AX
+{ _%
+pushf
+pusha
+        call    vyvod.ax
+popa
+popf
+%_ }
+macro   _ax_                                    ; output AX and BK
+{ _%
+pushf
+pusha
+        call    vyvod.ax
+BK
+popa
+popf
+%_ }
+macro   _ax@                                    ; output AX and BK
+{ _%
+pushf
+pusha
+        call    vyvod.ax
+_@
+popa
+popf
+%_ }
+macro   _eax                                    ; output EAX
+{ _%
+pushf
+pushad
+        call    vyvod.eax
+popad
+popf
+%_ }
+macro   _eax_                                   ; output EAX and BK
+{ _%
+pushf
+pushad
+        call    vyvod.eax
+BK
+popad
+popf
+%_ }
+macro   _eax@                                   ; output EAX and BK
+{ _%
+pushf
+pushad
+        call    vyvod.eax
+_@
+popad
+popf
+%_ }
+macro   _b     b_                              ; output reg8
+{ _%
+push    ax
+        mov     al, b_
+_al
+pop ax
+%_ }
+macro   _b_    b_                              ; output reg8 and BK
+{ _%
+push    ax
+        mov     al, b_
+_al
+pop ax
+BK
+%_ }
+macro   _b@    b_                              ; output reg8 and BK
+{ _%
+push    ax
+        mov     al, b_
+_al
+pop ax
+_@
+%_ }
+macro   _w     w_                            ; output reg16
+{ _%
+push    ax
+        mov     ax, w_
+_ax
+pop ax
+%_ }
+macro   _w_   w_                             ; output reg16 and BK
+{ _%
+push    ax
+        mov     ax, w_
+_ax
+pop ax
+BK
+%_ }
+macro   _w@   w_                             ; output reg16 and BK
+{ _%
+push    ax
+        mov     ax, w_
+_ax
+pop ax
+_@
+%_ }
+macro   _d     d_                            ; output reg32
+{ _%
+push    eax
+        mov     eax, d_
+_eax
+pop eax
+%_ }
+macro   _d_    d_                            ; output reg32 and BK
+{ _%
+push    eax
+        mov     eax, d_
+_eax
+pop eax
+BK
+%_ }
+macro   _d@    d_                            ; output reg32 and BK
+{ _%
+push    eax
+        mov     eax, d_
+_eax
+pop eax
+_@
+%_ }
+macro   msg_al   txt
+{ _%
+msg   txt
+_al
+%_ }
+macro   msg_al_  txt
+{ _%
+msg   txt
+_al_
+%_ }
+macro   msg_al@  txt
+{ _%
+msg   txt
+_al@
+%_ }
+macro   msg_ax   txt
+{ _%
+msg   txt
+_ax
+%_ }
+macro   msg_ax_  txt
+{ _%
+msg   txt
+_ax_
+%_ }
+macro   msg_ax@  txt
+{ _%
+msg   txt
+_ax@
+%_ }
+macro   msg_eax  txt
+{ _%
+msg   txt
+_eax
+%_ }
+macro   msg_eax_ txt
+{ _%
+msg   txt
+_eax_
+%_ }
+macro   msg_eax@ txt
+{ _%
+msg   txt
+_eax@
+%_ }
+macro   msg_b   txt, r8
+{ _%
+msg   txt
+_b r8
+%_ }
+macro   msg_b_  txt, r8
+{ _%
+msg   txt
+_b_ r8
+%_ }
+macro   msg_b@  txt, r8
+{ _%
+msg   txt
+_b@ r8
+%_ }
+macro   msg_w   txt, r16
+{ _%
+msg   txt
+_w r16
+%_ }
+macro   msg_w_  txt, r16
+{ _%
+msg   txt
+_w_ r16
+%_ }
+macro   msg_w@  txt, r16
+{ _%
+msg   txt
+_w@ r16
+%_ }
+macro   msg_d   txt, r32
+{ _%
+msg   txt
+_d r32
+%_ }
+macro   msg_d_  txt, r32
+{ _%
+msg   txt
+_d_ r32
+%_ }
+macro   msg_d@  txt, r32
+{ _%
+msg   txt
+_d@ r32
+%_ }
+
+macro   _TD
+{ _%_   SHOW_INFO
+        call    _show_info
+%_ }
+macro   _TD.if          mode
+{ _%_   mode
+  _TD
+%_ }
+macro   _HC
+{ _%_   SHOW_STATUS
+        call    _show_status
+%_ }
+macro   _HC.if          mode
+{ _%_   mode
+  _HC
+%_ }
+macro   pause
+{
+local   .quit
+        call    GetChar
+;        cmp     ah, ASCII.ENTER
+;        je      xd.stop
+        cmp     ah, ASCII_code.ESC
+        jne     .quit
+ _HC
+ _TD
+        je      xd.stop
+.quit:
+}
+macro   PRINT           string
+{
+local   .quit, .text
+      pusha
+        mov     si, .text
+        call    Display_String
+_%
+        call    LOG_file.write
+        LOG^    _BK
+%_
+        jmp     .quit
+.text   db      string, 0dh, 0ah, 0
+.quit:
+      popa
+}

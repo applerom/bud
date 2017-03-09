@@ -1,0 +1,83 @@
+include '8042.equ'
+;[]=====.=======|===============================*==============[]
+wOld_int9__off  equ     [Old_int9.off]
+wOld_int9__seg  equ     [Old_int9.seg]
+wTBL__IRQ09h_off equ    word [es:9*4+0]
+wTBL__IRQ09h_seg equ    word [es:9*4+2]
+
+bFlag   equ   [Flag]
+
+bKBD_Status     equ     [KBD_Status]
+bLED_Status     equ     [LED_Status]
+bScanCode       equ     [ScanCode]
+bASCII_code     equ     [ASCII_code]
+;[]=====.=======|===============================*==============[]
+; Flag byte:
+Flag__Press_Symbol      = 00001b                ; bit 0 - Pressed symbol-key
+Flag__Press_ENTER_BS_F10= 00010b                ; bit 1 - Pressed ENTER, BACKSPASE or F10
+; KBD Status byte:
+KBD_Status.ScrollLock   = 00001b                ; bit 0 - ScrollLock
+KBD_Status.NumLock      = 00010b                ; bit 1 - NumLock
+KBD_Status.CapsLock     = 00100b                ; bit 2 - CapsLock
+KBD_Status.Shift        = 11000b
+KBD_Status.Shift_left   = 01000b                ; bit 3 - left Shift
+KBD_Status.Shift_right  = 10000b                ; bit 4 - right Shift
+; LED Status byte:
+LED_Status.ScrollLock   = 00000001b             ; bit 0 - ScrollLock
+LED_Status.NumLock      = 00000010b             ; bit 1 - NumLock
+LED_Status.CapsLock     = 00000100b             ; bit 2 - CapsLock
+LED_Status.reserved     = 11111000b             ; bit 2 - CapsLock
+; ASCII-code of input symbol
+ASCII_code.BACKSPACE    = 08h
+ASCII_code.TAB          = 09h
+ASCII_code.LF           = 0ah
+
+ASCII_code.CR           = 0dh
+ASCII_code.BK           = 0dh
+ASCII_code.ENTER        = 0dh
+
+ASCII_code.ESC          = 1bh
+; Scan-code of input symbol
+ScanCode.ESC            = 01h
+
+ScanCode.BACKSPACE      = 0eh
+ScanCode.TAB            = 0fh
+
+ScanCode.ENTER          = 1ch
+ScanCode.CTRL           = 1dh
+
+ScanCode.SHIFT_left     = 2ah
+
+ScanCode.SHIFT_right    = 36h
+ScanCode.PRINTSCREEN    = 37h
+ScanCode.ALT            = 38h
+ScanCode.SPACE          = 39h
+ScanCode.CAPSLOCK       = 3ah
+ScanCode.F1             = 3bh                   ; Functional scancodes
+ScanCode.F2             = 3ch
+ScanCode.F3             = 3dh
+ScanCode.F4             = 3eh
+ScanCode.F5             = 3fh
+ScanCode.F6             = 40h
+ScanCode.F7             = 41h
+ScanCode.F8             = 42h
+ScanCode.F9             = 43h
+ScanCode.F10            = 44h
+ScanCode.NUMLOCK        = 45h
+ScanCode.SCROLLOCK      = 46h
+ScanCode.HOME           = 47h                   ; Numeric keys scancodes
+ScanCode.UP             = 48h
+ScanCode.PAGEUP         = 49h
+ScanCode.MINUS_num      = 4ah
+ScanCode.LEFT           = 4bh
+ScanCode.CENTER         = 4ch
+ScanCode.RIGHT          = 4dh
+ScanCode.PLUS_num       = 4eh
+ScanCode.END            = 4fh
+ScanCode.DOWN           = 50h
+ScanCode.PAGEDOWN       = 51h
+ScanCode.INSERT         = 52h
+ScanCode.DELETE         = 53h
+
+ScanCode.F11            = 57h
+ScanCode.F12            = 58h

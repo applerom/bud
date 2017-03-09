@@ -1,0 +1,212 @@
+include 'equ\macro.equ'                             ; macroses
+include 'equ\USB.equ'                               ; USB variables
+
+include 'equ\UHC.equ'                               ; UHCI IO_Register & Data_Structures definition
+include 'equ\OHC.equ'                               ; OHCI IO_Register & Data_Structures definition
+include 'equ\EHC.equ'                               ; EHCI IO_Register & Data_Structures definition
+
+include 'equ\kbd.equ'
+;[]=====.=======|===============================*==============[]
+MAX_LOGON_ERRORS        = 2;3
+READ_PIN1               = 89h
+COMPLEATE_READ_PIN1     = 8ah
+CANCEL_READ_PIN1        = 8bh
+READ_PIN2               = 8ch
+;[]=====.=======|===============================*==============[]
+STAP_SIGNATURE  = 0aabbccddh
+MAX_KEY_LENGTH  = 16
+SHbCRC          = 0ffh
+struc struc_SH                                  ; Stap Header Structure
+{ label .data byte
+.SHdSignature   dd      STAP_SIGNATURE
+.SHwLength      dw      SHwLength               ;12
+.SHbCRC         db      SHbCRC
+.SHbCommand     db      ?
+.SHdID          dd      0
+SHwLength = $ - .data
+.SHbAuth        db      MAX_KEY_LENGTH dup (0)
+.SHbTransKey    db      MAX_KEY_LENGTH dup (0)
+.size = $ - .data
+}
+;[]=====.=======|===============================*==============[]
+kB = 1024
+Mb = 100000h
+BASE_IN_EXTENDED_MEMORY = 16*Mb
+SIZE_ALL_DATAS_IN_MEMORY= 8*Mb
+
+DATA_buffer             = 1000000h               ; 16*Mb
+DATA_buffer.size        =  100000h               ; 1*Mb
+
+TD_OHC_buffer           = 1100000h               ; 17*Mb
+TD_OHC_buffer.size      =   10000h
+TD_OHC_dummy            = 11d0000h
+TD_OHC.size             = 16
+TD_OHC_dummy.size       = TD_OHC.size
+
+ED_OHC_buffer           = 1200000h
+ED_OHC_dummy            = 12d0000h
+ED_OHC_buffer.size      = 64
+ED_OHC.size             = 16
+ED_OHC_dummy.size       = ED_OHC.size
+
+REQ                     = 1300000h
+REQ.size                = 8
+SH                      = 1400000h
+SH.size                 = 64
+
+FL_ADDRESS              = 1500000h
+
+dUser_buffer__Size      equ     [User_buffer__Size]
+;[]=====.=======|===============================*==============[]
+virtual at      ebp
+                vTD_OHC         struc_TD_OHC
+end virtual
+
+ebp__TD_OHC_dummy       equ     ebp     - TD_OHC_buffer +       TD_OHC_dummy
+ebp__ED_OHC             equ     ebp     - TD_OHC_buffer +       ED_OHC_buffer
+ebp__ED_OHC_dummy       equ     ebp     - TD_OHC_buffer +       ED_OHC_dummy
+ebp__REQ                equ     ebp     - TD_OHC_buffer +       REQ
+ebp__SH                 equ     ebp     - TD_OHC_buffer +       SH
+ebp__SH__Auth           equ     ebp     - TD_OHC_buffer +       SH      +       SHwLength
+
+virtual at      ebp__TD_OHC_dummy
+                vTD_OHC_dummy   struc_TD_OHC
+end virtual
+
+virtual at      ebp__ED_OHC
+                vED_OHC         struc_ED_OHC
+end virtual
+
+virtual at      ebp__ED_OHC_dummy
+                vED_OHC_dummy   struc_ED_OHC
+end virtual
+
+virtual at      ebp__REQ
+                vREQ            struc_REQ       0, 0, 0, 0, 0
+end virtual
+
+virtual at      ebp__SH
+                vSH             struc_SH
+end virtual
+
+virtual at      edi
+        vDATA_buffer    dd      100000h dup ?   ;MAX_DESP_LEN/4 dup 0
+end virtual
+
+virtual at      edi
+        DD_buffer               struc_DEVDSP    ; Device Descriptor Buffer
+end virtual
+
+virtual at      edi
+        CD_buffer               struc_CFGDSP    ; Configuration Descriptor Buffer
+        ID_buffer               struc_INTDSP    ; Interface Descriptor Buffer
+        ED_buffer               struc_ENDPDSP   ; Endpoint Descriptor Buffer
+        ;        db      MAX_DESP_LEN - ($-CD_buffer) dup 0
+end virtual
+;[]=====.=======|===============================*==============[]
+
+bLogon_Error_Counter    equ     [Logon_Error_Counter]
+bVideoMode              equ     [VideoMode]
+;[]=====.=======|===============================*==============[]
+; Messages
+NO_MSGS         = 00000000b
+SHOW_INFO       = 00000001b
+SHOW_STATUS     = 00000010b
+SHOW_CALLS      = 00000100b
+run_in.DOS      = 00001000b
+run_in.BIOS     = 00000000b
+file.INCLUDE    = 00010000b
+errors.SHOW_INFO= 00100000b
+debug_log.ON    = 01000000b
+
+MIN             = file.INCLUDE + run_in.DOS
+NORMAL          = file.INCLUDE + run_in.DOS + errors.SHOW_INFO + SHOW_CALLS
+DEBUG           = NORMAL and (not errors.SHOW_INFO) or SHOW_STATUS or SHOW_INFO
+MAX             = 11111111b
+
+LOG.ON          = MODE and debug_log.ON
+;[]=====.=======|===============================*==============[]
+XD_ID           = 10020547h
+CTRL_MPS_DEF    = 8                             ; default MPS for CTRL-operations (for EP0)
+BULK_MPS_DEF    = 64                            ; default MPS for BULK-operations (for XD - EP2/EP6)
+EP_BULK_IN_DEF  = 6 ; 1
+EP_BULK_OUT_DEF = 2
+EP2.free        = 00000001b
+EP2.full        = 00000010b
+EP4.free        = 00000100b
+EP4.full        = 00001000b
+EP6.free        = 00010000b
+EP6.full        = 00100000b
+EP8.free        = 01000000b
+EP8.full        = 10000000b
+;[]=====.=======|===============================*==============[]
+bREQ            equ     [es:vREQ]     ;REQ
+REQ__Type       equ     [es:vREQ.bmRequestType]
+REQ__Request    equ     [es:vREQ.bRequest]
+REQ__Value      equ     [es:vREQ.wValue]
+ REQ__Value_lo equ byte [es:vREQ.wValue]
+ REQ__Value_hi equ byte [es:vREQ.wValue + 1]
+REQ__Index      equ     [es:vREQ.wIndex]
+REQ__Length     equ     [es:vREQ.wLength]
+
+PARA__CtrlByte  equ     [PARA.bCtrlByte]        ; PARA-block
+PARA__DevAddr   equ     [PARA.bDevAddr ]
+PARA__DevEndp   equ     [PARA.bDevEndp]
+PARA__ParentAddr equ    [PARA.bParentAddr]
+PARA__ParentPort equ    [PARA.bParentPort]
+PARA__ReqBuffer equ     [PARA.wReqBuffer]
+;PARA__DataBuffer equ    esi;[PARA.wDataBuffer]
+PARA__TotalSize equ     [PARA.wTotalSize]
+PARA__MaxSize   equ     [PARA.wMaxSize]
+PARA__DeviceID  equ     [PARA.dDeviceID]
+PARA__CTRL_MPS  equ     [PARA.wCTRL_MPS]
+PARA__BULK_MPS  equ     [PARA.wBULK_MPS]
+
+dSH__Signature  equ     [es:vSH.SHdSignature]
+wSH__Length     equ     [es:vSH.SHwLength]
+bSH__CRC        equ     [es:vSH.SHbCRC]
+bSH__Command    equ     [es:vSH.SHbCommand]
+dSH__ID         equ     [es:vSH.SHdID]
+sSH__Auth       equ     [es:vSH.SHbAuth]
+off_SH__Auth    = SH + SHwLength
+
+d00h_SH__Auth   equ     dword [es:vSH.SHbAuth + 00h]
+d04h_SH__Auth   equ     dword [es:vSH.SHbAuth + 04h]
+d08h_SH__Auth   equ     dword [es:vSH.SHbAuth + 08h]
+d0ch_SH__Auth   equ     dword [es:vSH.SHbAuth + 0ch]
+d10h_SH__Auth   equ     dword [es:vSH.SHbAuth + 10h]
+d14h_SH__Auth   equ     dword [es:vSH.SHbAuth + 14h]
+
+bDATA_buffer    equ     byte [es:vDATA_buffer]
+wDATA_buffer    equ     word [es:vDATA_buffer]
+dDATA_buffer    equ     dword [es:vDATA_buffer]
+aDATA_buffer    equ     [es:vDATA_buffer]
+
+;[]=====.=======|===============================*==============[]
+struc struc_PARA { label .data byte             ; Control Transfer parameter data structure
+.bCtrlByte      db      0
+.bDevAddr       db      0
+.bDevEndp       db      0
+.bParentAddr    db      0
+.bParentPort    db      0
+.wReqBuffer     dw      0
+.wDataBuffer    dw      0
+.wTotalSize     dw      0
+.wMaxSize       dw      0
+.dDeviceID      dd      XD_ID
+.wCTRL_MPS      dw      CTRL_MPS_DEF
+.wBULK_MPS      dw      BULK_MPS_DEF
+.wTD_Default    dw      0
+.size = $-.data }
+
+  ; Bit definition of bCtrlByte
+  CP_LS = 00000001b                             ; bit0=low speed device
+  CP_RD = 00000010b                             ; bit1=control read
+  LOW_SPEED     = CP_LS
+  DIRECTION__IN = CP_RD
+
+struc   struc.off_seg
+{
+zw      .off                                    ; Offset
+zw      .seg                                    ; Segment
+}
